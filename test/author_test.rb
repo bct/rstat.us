@@ -21,7 +21,6 @@ class AuthorTest < MiniTest::Unit::TestCase
   def test_valid_avatar_url
     @author.email = "jamecook@gmail.com"
 
-    gravatar_url = nil
     VCR.use_cassette('fetch_valid_gravatar') do
       gravatar_url = @author.gravatar_url
       assert_equal gravatar_url, @author.avatar_url
@@ -33,5 +32,20 @@ class AuthorTest < MiniTest::Unit::TestCase
       @author.email = "completely@invalid-email.asdfasd.com"
       assert_equal "/images/avatar.png", @author.avatar_url
     end
+  end
+
+  def test_avatar_url_memoization
+    # without an email address, no gravatar can be found
+    refute @author.valid_gravatar?
+
+    @author.email = "jamecook@gmail.com"
+
+    # this call checks to see if the gravatar exists
+    VCR.use_cassette('fetch_valid_gravatar') do
+      assert @author.valid_gravatar?
+    end
+
+    # at this point the result should be cached, no further requests should be made
+    assert @author.valid_gravatar?
   end
 end
