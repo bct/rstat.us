@@ -10,12 +10,20 @@ class Author
   key :website, String
   key :bio, String
   key :image_url, String
+  key :valid_gravatar, Boolean
 
   one :feed
   one :user
   
  # The url of their profile page
   key :remote_url, String
+
+  def email= x
+    super(x)
+
+    # address changed, we'll have to redo our gravatar check
+    self.valid_gravatar = nil
+  end
 
   def self.create_from_hash!(hsh)
     create!(
@@ -48,16 +56,20 @@ class Author
   # this should really be cached.
   def valid_gravatar?
     return unless email
+    return valid_gravatar unless valid_gravatar.nil?
 
-    @valid_gravatar ||= begin
-                          Net::HTTP.start(GRAVATAR_HOST, 80) do |http|
-                            # Use HEAD instead of GET for SPEED!
-                            http.head(gravatar_path).is_a?(Net::HTTPOK)
-                          end
-                        rescue
-                          # No internet connection
-                          false
-                        end
+    res = begin
+            Net::HTTP.start(GRAVATAR_HOST, 80) do |http|
+              # Use HEAD instead of GET for SPEED!
+              http.head(gravatar_path).is_a?(Net::HTTPOK)
+            end
+          rescue
+            # No internet connection
+            false
+          end
+
+    update_attributes(:valid_gravatar => res)
+    res
   end
 
   def gravatar_url

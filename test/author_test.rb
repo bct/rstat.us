@@ -40,12 +40,25 @@ class AuthorTest < MiniTest::Unit::TestCase
 
     @author.email = "jamecook@gmail.com"
 
-    # this call checks to see if the gravatar exists
+    # here we check to see if the gravatar exists
     VCR.use_cassette('fetch_valid_gravatar') do
       assert @author.valid_gravatar?
     end
 
     # at this point the result should be cached, no further requests should be made
     assert @author.valid_gravatar?
+
+    # but if we change the email address...
+    @author.email = "completely@invalid-email.asdfasd.com"
+    @author.save
+    @author.reload
+
+    # another request is made
+    VCR.use_cassette('fetch_valid_gravatar') do
+      refute @author.valid_gravatar?
+    end
+
+    # (just once)
+    refute @author.valid_gravatar?
   end
 end
